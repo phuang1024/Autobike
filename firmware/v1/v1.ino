@@ -3,14 +3,13 @@ struct StepperDelta {
     bool dir;
 };
 
-
 // pin 3, 4, 5: ena, dir, pul
 class Stepper {
 public:
     const long SPR = 400 * 19.19;
     // Max rotation in each direction.
     const long MAX_STEPS = degrees_to_steps(45);
-    const long MIN_STEP_TIME = 700;
+    const long MIN_STEP_TIME = 500;
 
     Stepper() {
         pinMode(3, OUTPUT);
@@ -79,6 +78,21 @@ public:
         rotate_for(job, step_time);
     }
 
+    // rotate_to, but limited to a max working time.
+    // max_time: ms
+    void rotate_to_limited(long target, long step_time, long max_time) {
+        const long max_steps = 1000L * max_time / step_time;
+        StepperDelta job = compute_rotate_to(target);
+        if (job.steps > max_steps) {
+            job.steps = max_steps;
+        } else {
+            if (job.steps > 0) {
+                step_time = 1000L * max_time / job.steps;
+            }
+        }
+        rotate_for(job, step_time);
+    }
+
 private:
     long position;
 };
@@ -92,22 +106,7 @@ void setup() {
 
 void loop() {
     int ctrl = pulseIn(8, HIGH);
-    long position = map(constrain(ctrl, 1000, 2000), 1000, 2000, -45, 45);
-    StepperDelta job = steering.compute_rotate_to(position);
-
-    // slower for low magnitude rotations.
-    long saturate_steps = 300;
-    long slowest = 2000;
-    long fastest = 600;
-    long step_time;
-    if (job.steps > saturate_steps) {
-        step_time = fastest;
-    } else {
-        step_time = map(job.steps, 0, saturate_steps, slowest, fastest);
-    }
-
-    if (job.steps > 20) {
-        job.steps = min(job.steps, 300);
-        steering.rotate_for(job, step_time);
-    }
+    ctrl = constrain(ctrl, 1000, 2000) / 25 * 25;
+    long position = map(ctrl, 1000, 2000, -45, 45);
+    steering.rotate_to_limited(position, steering.MIN_STEP_TIME, 30);
 }
