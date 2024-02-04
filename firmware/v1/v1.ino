@@ -1,3 +1,9 @@
+struct StepperDelta {
+  long steps;
+  bool dir;
+};
+
+
 // pin 3, 4, 5: ena, dir, pul
 class Stepper {
 public:
@@ -25,16 +31,19 @@ public:
     }
   }
 
+  void do_steps(StepperDelta job, long step_time) {
+    do_steps(job.steps, job.dir, step_time);
+  }
+
   // target: degrees
-  // max_steps: Stop if we reach this value.
-  void rotate_to(long target, long step_time, long max_steps = 0) {
+  StepperDelta compute_rotate_to(long target) {
     target = degrees_to_steps(target);
-    dir = target > position;
+    bool dir = target > position;
     long delta = abs(target - position);
-    if (max_steps > 0) {
-      delta = min(delta, max_steps);
-    }
-    do_steps(delta, dir, step_time);
+    StepperDelta ret;
+    ret.dir = dir;
+    ret.steps = delta;
+    return ret;
   }
 
   // TODO maybe use float?
@@ -47,8 +56,8 @@ public:
   }
 
 private:
+  // TODO this is wrong
   const long spr = 200 * 19.19;
-  const long min_step_time = 1000;
   long position;
 };
 
@@ -60,7 +69,23 @@ void setup() {
 }
 
 void loop() {
-  int ctrl = pulseIn(10, HIGH);
-  long position = map(constrain(ctrl, 1000, 2000), 1000, 2000, -45, 45);
-  steering.rotate_to(position, 5000, 100);
+  int ctrl = pulseIn(8, HIGH);
+  long position = map(constrain(ctrl, 1000, 2000), 1000, 2000, -90, 90);
+  StepperDelta job = steering.compute_rotate_to(position);
+
+  // slower for low magnitude rotations.
+  long saturate_steps = 300;
+  long slowest = 2000;
+  long fastest = 600;
+  long step_time;
+  if (job.steps > saturate_steps) {
+    step_time = fastest;
+  } else {
+    step_time = map(job.steps, 0, saturate_steps, slowest, fastest);
+  }
+
+  if (job.steps > 20) {
+    job.steps = min(job.steps, 300);
+    steering.do_steps(job, step_time);
+  }
 }
