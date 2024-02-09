@@ -1,25 +1,71 @@
-struct StepperDelta {
-    long steps;
-    bool dir;
-};
+#include <IBusBM.h>
 
-// pin 3, 4, 5: ena, dir, pul
-class Stepper {
+
+// use stepper motor with a servo like api.
+class StepperServo {
 public:
-    const long SPR = 400 * 19.19;
-    // Max rotation in each direction.
-    const long MAX_STEPS = degrees_to_steps(45);
-    const long MIN_STEP_TIME = 500;
-
-    Stepper() {
-        pinMode(3, OUTPUT);
-        pinMode(4, OUTPUT);
-        pinMode(5, OUTPUT);
-
-        position = 0;
+    StepperServo() {
+        pos = 0;
+        last_st = MAX_ST;
     }
 
-    // TODO maybe use float?
+    // turn to degrees position, returning after working for max_time ms.
+    void turn_to(int target, long max_time) {
+        const unsigned long time_start = millis();
+
+        target = constrain(target, -MAX_POS, MAX_POS);
+        target = degrees_to_steps(target);
+
+        while (millis() - time_start < max_time) {
+            const long delta = abs(target - pos);
+            if (abs(target - pos) < 50) {
+                return;
+            }
+
+            long target_st;
+            if (delta > DECEL_BEGIN) {
+                target_st = MIN_ST;
+            } else {
+                target_st = map(delta, 0, DECEL_BEGIN, MAX_ST, MIN_ST);
+            }
+
+            target_st = constrain(target_st, MIN_ST, MAX_ST);
+            if (target < pos) {
+                target_st = -target_st;
+            }
+
+            last_st = last_st * (1 - ACCEL) + target_st * ACCEL;
+            do_step(last_st > 0);
+            delayMicroseconds(abs(last_st));
+
+            /*
+            Serial.print(pos);
+            Serial.print(' ');
+            Serial.print(delta);
+            Serial.print(' ');
+            Serial.print(target_st);
+            Serial.println();
+            delay(100);
+            */
+        }
+    }
+
+private:
+    const int SPR = 800 * 19.19;
+    // degrees, plus/minus
+    const int MAX_POS = degrees_to_steps(45);
+    const int MIN_ST = 300;
+    const int MAX_ST = 2000;
+    // start decelerating when this many steps left.
+    const int DECEL_BEGIN = 300;
+    // weighted average factor
+    const float ACCEL = 0.1;
+
+    // steps
+    long pos;
+    // negative means rotating in neg dir
+    long last_st;
+
     long steps_to_degrees(long steps) {
         return steps * 360L / SPR;
     }
@@ -36,77 +82,34 @@ public:
         digitalWrite(4, (dir ? HIGH : LOW));
     }
 
-    // step_time: us
-    void rotate_for(long steps, bool dir, long step_time) {
-        step_time = max(step_time, MIN_STEP_TIME);
-
-        set_enable(true);
+    void do_step(bool dir) {
+        if (dir && pos >= MAX_POS || !dir && pos <= -MAX_POS) {
+            return;
+        }
         set_dir(dir);
-
-        for (long i = 0; i < steps; i++) {
-            digitalWrite(5, HIGH);
-            digitalWrite(5, LOW);
-            delayMicroseconds(step_time);
-        }
-
-        if (dir) {
-            position += steps;
-        } else {
-            position -= steps;
-        }
+        digitalWrite(5, HIGH);
+        digitalWrite(5, LOW);
+        pos += dir ? 1 : -1;
     }
-
-    void rotate_for(StepperDelta job, long step_time) {
-        rotate_for(job.steps, job.dir, step_time);
-    }
-
-    // target: degrees
-    // will take into account MAX_STEPS
-    StepperDelta compute_rotate_to(long target) {
-        target = degrees_to_steps(target);
-        target = constrain(target, -MAX_STEPS, MAX_STEPS);
-        bool dir = target > position;
-        long delta = abs(target - position);
-        StepperDelta ret;
-        ret.dir = dir;
-        ret.steps = delta;
-        return ret;
-    }
-
-    void rotate_to(long target, long step_time) {
-        StepperDelta job = compute_rotate_to(target);
-        rotate_for(job, step_time);
-    }
-
-    // rotate_to, but limited to a max working time.
-    // max_time: ms
-    void rotate_to_limited(long target, long step_time, long max_time) {
-        const long max_steps = 1000L * max_time / step_time;
-        StepperDelta job = compute_rotate_to(target);
-        if (job.steps > max_steps) {
-            job.steps = max_steps;
-        } else {
-            if (job.steps > 0) {
-                step_time = 1000L * max_time / job.steps;
-            }
-        }
-        rotate_for(job, step_time);
-    }
-
-private:
-    long position;
 };
 
 
-Stepper steering;
-
+IBusBM ibus;
+StepperServo steering;
 
 void setup() {
+    Serial.begin(9600);
+
+    pinMode(3, OUTPUT);
+    pinMode(4, OUTPUT);
+    pinMode(5, OUTPUT);
+
+    // receiving on RX1 (pin 19 on Mega)
+    ibus.begin(Serial1);
 }
 
 void loop() {
-    int ctrl = pulseIn(8, HIGH);
-    ctrl = constrain(ctrl, 1000, 2000) / 25 * 25;
-    long position = map(ctrl, 1000, 2000, -45, 45);
-    steering.rotate_to_limited(position, steering.MIN_STEP_TIME, 30);
+    uint16_t val = ibus.readChannel(0);
+    long position = map(val, 1000, 2000, -45, 45);
+    steering.turn_to(position, 50);
 }
