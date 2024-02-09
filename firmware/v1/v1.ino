@@ -6,6 +6,7 @@
 
 IBusBM ibus;
 StepperServo steering;
+PIDControl pid_balance(0, 0, 0, 1, 0.99);
 
 void setup() {
     Serial.begin(9600);

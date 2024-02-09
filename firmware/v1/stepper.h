@@ -1,3 +1,6 @@
+#pragma once
+
+
 // use stepper motor with a servo like api.
 class StepperServo {
 public:
