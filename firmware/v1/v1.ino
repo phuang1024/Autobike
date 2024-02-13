@@ -3,15 +3,7 @@
 #include "./imu.h"
 #include "./pid.h"
 #include "./stepper.h"
-
-
-float mapf(float v, float old_min, float old_max, float new_min, float new_max) {
-    return (v-old_min) / (old_max-old_min) * (new_max-new_min) + new_min;
-}
-
-float constrainf(float v, float min_v, float max_v) {
-    return min(max(v, min_v), max_v);
-}
+#include "./utils.h"
 
 
 IBusBM ibus;
@@ -37,18 +29,22 @@ void setup() {
     // update pid: every loop
     const int loop_interval = 50;
     while (true) {
+        // read RC
         uint16_t rx_steering = ibus.readChannel(0);
         uint16_t rx_throttle = ibus.readChannel(2);
         uint16_t rx_enable = ibus.readChannel(4);
-        
+
+        // read IMU
         IMURead imu = imu_read_avg(5, 10);
         ax = ax * imu_avg + imu.ax * (1 - imu_avg);
         gx = gx * imu_avg + imu.gx * (1 - imu_avg);
 
+        // update steering enable
         steering.set_enable(rx_enable > 1500);
 
-        long steering_pos = map(rx_steering, 1000, 2000, -45, 45);
-        steering_pos = (long)mapf(ax, -0.1, 0.1, -45, 45);
+        // tmp steering test
+        //long steering_pos = map(rx_steering, 1000, 2000, -45, 45);
+        long steering_pos = (long)mapf(ax, -0.1, 0.1, -45, 45);
         steering.turn_to(steering_pos, loop_interval);
     }
 }

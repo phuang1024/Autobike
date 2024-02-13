@@ -1,5 +1,7 @@
 #pragma once
 
+#include "./utils.h"
+
 
 // use stepper motor with a servo like api.
 class StepperServo {
@@ -23,15 +25,15 @@ public:
 
     // turn to degrees position, returning after working for max_time ms.
     // returns immediately if not enabled.
-    void turn_to(int target, long max_time) {
+    void turn_to(float target, long max_time) {
         const unsigned long time_start = millis();
 
-        target = constrain(target, -MAX_POS, MAX_POS);
+        target = constrainf(target, -MAX_POS, MAX_POS);
         target = degrees_to_steps(target);
 
         while (millis() - time_start < max_time) {
-            const long delta = abs(target - pos);
-            if (abs(target - pos) < 50) {
+            const long delta = fabs(target - pos);
+            if (fabs(target - pos) < 50) {
                 return;
             }
 
@@ -70,12 +72,12 @@ private:
     long last_st;
     bool enabled;
 
-    long steps_to_degrees(long steps) {
-        return steps * 360L / SPR;
+    float steps_to_degrees(long steps) {
+        return (float)steps * 360 / SPR;
     }
 
-    long degrees_to_steps(long degrees) {
-        return degrees * SPR / 360L;
+    long degrees_to_steps(float degrees) {
+        return degrees * SPR / 360;
     }
 
     void set_dir(bool dir) {
