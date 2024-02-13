@@ -54,13 +54,13 @@ public:
     }
 
 private:
-    const int SPR = 800 * 19.19;
+    const int SPR = 400 * 50.9;
     // degrees, plus/minus
     const int MAX_POS = degrees_to_steps(45);
-    const int MIN_ST = 300;
-    const int MAX_ST = 2000;
+    const int MIN_ST = 200;
+    const int MAX_ST = 1500;
     // start decelerating when this many steps left.
-    const int DECEL_BEGIN = 300;
+    const int DECEL_BEGIN = 600;
     // weighted average factor
     const float ACCEL = 0.1;
 

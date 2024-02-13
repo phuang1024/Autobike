@@ -41,7 +41,7 @@ void setup() {
         uint16_t rx_throttle = ibus.readChannel(2);
         uint16_t rx_enable = ibus.readChannel(4);
         
-        IMURead imu = imu_read();
+        IMURead imu = imu_read_avg(5, 10);
         ax = ax * imu_avg + imu.ax * (1 - imu_avg);
         gx = gx * imu_avg + imu.gx * (1 - imu_avg);
 

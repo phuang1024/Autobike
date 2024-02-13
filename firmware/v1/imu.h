@@ -56,6 +56,31 @@ IMURead imu_read() {
     return res;
 }
 
+// count: Number of readings to average.
+// delay: Delay between readings in us.
+IMURead imu_read_avg(int count, int delay) {
+    IMURead res = {0, 0, 0, 0, 0, 0, 0};
+    for (int i = 0; i < count; i++) {
+        IMURead r = imu_read();
+        res.ax += r.ax;
+        res.ay += r.ay;
+        res.az += r.az;
+        res.gx += r.gx;
+        res.gy += r.gy;
+        res.gz += r.gz;
+        res.temp += r.temp;
+        delayMicroseconds(delay);
+    }
+    res.ax /= count;
+    res.ay /= count;
+    res.az /= count;
+    res.gx /= count;
+    res.gy /= count;
+    res.gz /= count;
+    res.temp /= count;
+    return res;
+}
+
 void print_imu(IMURead& imu) {
     Serial.print(imu.ax); Serial.print(' ');
     Serial.print(imu.ay); Serial.print(' ');
