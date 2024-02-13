@@ -7,13 +7,22 @@ public:
     StepperServo() {
         pos = 0;
         last_st = MAX_ST;
+        enabled = true;
+
+        set_enable(true);
 
         pinMode(3, OUTPUT);
         pinMode(4, OUTPUT);
         pinMode(5, OUTPUT);
     }
 
+    void set_enable(bool ena) {
+        digitalWrite(3, (ena ? LOW : HIGH));
+        enabled = ena;
+    }
+
     // turn to degrees position, returning after working for max_time ms.
+    // returns immediately if not enabled.
     void turn_to(int target, long max_time) {
         const unsigned long time_start = millis();
 
@@ -59,6 +68,7 @@ private:
     long pos;
     // negative means rotating in neg dir
     long last_st;
+    bool enabled;
 
     long steps_to_degrees(long steps) {
         return steps * 360L / SPR;
@@ -66,10 +76,6 @@ private:
 
     long degrees_to_steps(long degrees) {
         return degrees * SPR / 360L;
-    }
-
-    void set_enable(bool ena) {
-        digitalWrite(3, (ena ? LOW : HIGH));
     }
 
     void set_dir(bool dir) {

@@ -1,5 +1,9 @@
 #pragma once
 
+#include <Wire.h>
+
+const int I2C_IMU = 0x68;
+
 
 struct IMURead {
     // Absolute position (accelerometer).
@@ -15,6 +19,11 @@ void imu_init() {
     Wire.write(0x6B);
     Wire.write(0);
     Wire.endTransmission(true);
+}
+
+
+uint16_t read_u16() {
+    return (Wire.read() << 8) | Wire.read();
 }
 
 
