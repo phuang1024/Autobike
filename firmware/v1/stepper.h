@@ -26,30 +26,41 @@ public:
     // turn to degrees position, returning after working for max_time ms.
     // returns immediately if not enabled.
     void turn_to(float target, long max_time) {
+        if (!enabled) {
+            return;
+        }
+
         const unsigned long time_start = millis();
 
         target = constrainf(target, -MAX_POS, MAX_POS);
         target = degrees_to_steps(target);
 
+        int i = ST_UPDATE_INTERVAL;
         while (millis() - time_start < max_time) {
-            const long delta = fabs(target - pos);
-            if (fabs(target - pos) < 50) {
-                return;
+            if (i >= ST_UPDATE_INTERVAL) {
+                i = 0;
+
+                const long delta = fabs(target - pos);
+                if (fabs(target - pos) < 50) {
+                    return;
+                }
+
+                long target_st;
+                if (delta > DECEL_BEGIN) {
+                    target_st = MIN_ST;
+                } else {
+                    target_st = map(delta, 0, DECEL_BEGIN, MAX_ST, MIN_ST);
+                }
+
+                target_st = constrain(target_st, MIN_ST, MAX_ST);
+                if (target < pos) {
+                    target_st = -target_st;
+                }
+
+                last_st = last_st * (1 - ACCEL) + target_st * ACCEL;
             }
 
-            long target_st;
-            if (delta > DECEL_BEGIN) {
-                target_st = MIN_ST;
-            } else {
-                target_st = map(delta, 0, DECEL_BEGIN, MAX_ST, MIN_ST);
-            }
-
-            target_st = constrain(target_st, MIN_ST, MAX_ST);
-            if (target < pos) {
-                target_st = -target_st;
-            }
-
-            last_st = last_st * (1 - ACCEL) + target_st * ACCEL;
+            i++;
             do_step(last_st > 0);
             delayMicroseconds(abs(last_st));
         }
@@ -65,6 +76,8 @@ private:
     const int DECEL_BEGIN = 600;
     // weighted average factor
     const float ACCEL = 0.1;
+    // recalculate step time every x steps for performance.
+    const int ST_UPDATE_INTERVAL = 5;
 
     // steps
     long pos;
