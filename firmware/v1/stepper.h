@@ -7,17 +7,18 @@
 class StepperServo {
 public:
     StepperServo() {
-        pos = 0;
-        last_st = MAX_ST;
-        curr_dir = false;
+        // ena, dir, step
+        pinMode(3, OUTPUT);
+        pinMode(4, OUTPUT);
+        pinMode(5, OUTPUT);
+
+        position = 0;
+        velocity = 0;
+        direction = false;
         enabled = true;
 
         set_dir(false);
         set_enable(true);
-
-        pinMode(3, OUTPUT);
-        pinMode(4, OUTPUT);
-        pinMode(5, OUTPUT);
     }
 
     void set_enable(bool ena) {
@@ -26,66 +27,72 @@ public:
     }
 
     // turn to degrees position, returning after working for max_time ms.
-    // returns immediately if not enabled.
-    void turn_to(float target, long max_time) {
+    // if job is completed, will delay for the remaining time.
+    void turn_to(float target_deg, long max_time) {
         if (!enabled) {
             return;
         }
 
         const unsigned long time_start = millis();
 
-        target = constrainf(target, -MAX_POS, MAX_POS);
-        target = degrees_to_steps(target);
+        target_deg = constrainf(target_deg, -MAX_POS, MAX_POS);
+        long target = degrees_to_steps(target_deg);
 
         int i = ST_UPDATE_INTERVAL;
+        int step_time;   // value set in first iteration
         while (millis() - time_start < max_time) {
             if (i >= ST_UPDATE_INTERVAL) {
                 i = 0;
 
-                const long delta = fabs(target - pos);
-                if (fabs(target - pos) < 50) {
-                    return;
-                }
+                long delta = abs(target - position);
 
-                long target_st;
+                // calculate magnitude of target velocity
+                float target_vel;
                 if (delta > DECEL_BEGIN) {
-                    target_st = MIN_ST;
+                    target_vel = 1;
                 } else {
-                    target_st = map(delta, 0, DECEL_BEGIN, MAX_ST, MIN_ST);
+                    target_vel = (float)delta / DECEL_BEGIN;
                 }
+                target_vel = constrainf(target_vel, 0, 1);
 
-                target_st = constrain(target_st, MIN_ST, MAX_ST);
+                // check direction
                 if (target < pos) {
-                    target_st = -target_st;
+                    target_vel = -target_vel;
                 }
 
-                last_st = last_st * (1 - ACCEL) + target_st * ACCEL;
+                // update velocity via weighted average
+                velocity = velocity * (1 - ACCEL) + target_vel * ACCEL;
+
+                // update step time
+                step_time = vel_to_st(velocity);
             }
 
             i++;
-            do_step(last_st > 0);
-            delayMicroseconds(abs(last_st));
+            do_step(velocity > 0);
+            delayMicroseconds(step_time);
         }
     }
 
 private:
+    // steps per revolution
     const int SPR = 400 * 50.9;
-    // degrees, plus/minus
+    // max steps possible in both directions
     const int MAX_POS = degrees_to_steps(45);
+    // min and max step time (us)
     const int MIN_ST = 300;
-    const int MAX_ST = 1500;
+    const int MAX_ST = 3000;
     // start decelerating when this many steps left.
-    const int DECEL_BEGIN = 300;
+    const int DECEL_BEGIN = degrees_to_steps(5);
     // weighted average factor
     const float ACCEL = 0.05;
-    // recalculate step time every x steps for performance.
+    // recalculate step time every x steps (as opposed to every step) for performance.
     const int ST_UPDATE_INTERVAL = 10;
 
-    // steps
-    long pos;
-    // negative means rotating in neg dir
-    long last_st;
-    bool curr_dir;
+    // steps position
+    long position;
+    // velocity; -1 to 1.
+    float velocity;
+    bool direction;
     bool enabled;
 
     float steps_to_degrees(long steps) {
@@ -96,21 +103,24 @@ private:
         return degrees * SPR / 360;
     }
 
+    // convert abs(velocity) to step time; i.e. always returns positive number.
+    // 0 to 1 -> MAX_ST to MIN_ST
+    int vel_to_st(float vel) {
+        return (int)mapf(constrainf(fabs(vel), 0, 1), 0, 1, MAX_ST, MIN_ST);
+    }
+
     void set_dir(bool dir) {
-        if (dir != curr_dir) {
-          digitalWrite(4, (dir ? HIGH : LOW));
-          //delayMicroseconds(600);
-          curr_dir = dir;
-        }
+        digitalWrite(4, (dir ? HIGH : LOW));
+        this->direction = dir;
     }
 
     void do_step(bool dir) {
-        if (dir && pos >= MAX_POS || !dir && pos <= -MAX_POS) {
+        if (dir && position >= MAX_POS || !dir && position <= -MAX_POS) {
             return;
         }
         set_dir(dir);
         digitalWrite(5, HIGH);
         digitalWrite(5, LOW);
-        pos += dir ? 1 : -1;
+        position += dir ? 1 : -1;
     }
 };
