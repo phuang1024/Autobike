@@ -95,7 +95,7 @@ void test_imu() {
 void setup() {
     initalize();
 
-    //test_steering();
+    test_steering();
 
     main_loop();
 }

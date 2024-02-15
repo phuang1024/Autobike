@@ -39,12 +39,14 @@ public:
         long target = degrees_to_steps(target_deg);
 
         int i = ST_UPDATE_INTERVAL;
-        int step_time;   // value set in first iteration
+        // value set in first iteration
+        long step_time;
+        long delta;
         while (millis() - time_start < max_time) {
             if (i >= ST_UPDATE_INTERVAL) {
                 i = 0;
 
-                long delta = abs(target - position);
+                delta = abs(target - position);
 
                 // calculate magnitude of target velocity
                 float target_vel;
@@ -56,7 +58,7 @@ public:
                 target_vel = constrainf(target_vel, 0, 1);
 
                 // check direction
-                if (target < pos) {
+                if (target < position) {
                     target_vel = -target_vel;
                 }
 
@@ -68,7 +70,9 @@ public:
             }
 
             i++;
-            do_step(velocity > 0);
+            if (delta >= 30) {
+                do_step(velocity > 0);
+            }
             delayMicroseconds(step_time);
         }
     }
@@ -80,11 +84,11 @@ private:
     const int MAX_POS = degrees_to_steps(45);
     // min and max step time (us)
     const int MIN_ST = 300;
-    const int MAX_ST = 3000;
+    const int MAX_ST = 1500;
     // start decelerating when this many steps left.
     const int DECEL_BEGIN = degrees_to_steps(5);
     // weighted average factor
-    const float ACCEL = 0.05;
+    const float ACCEL = 0.2;
     // recalculate step time every x steps (as opposed to every step) for performance.
     const int ST_UPDATE_INTERVAL = 10;
 
@@ -110,12 +114,13 @@ private:
     }
 
     void set_dir(bool dir) {
-        digitalWrite(4, (dir ? HIGH : LOW));
+        digitalWrite(4, (dir ? LOW : HIGH));
         this->direction = dir;
     }
 
     void do_step(bool dir) {
         if (dir && position >= MAX_POS || !dir && position <= -MAX_POS) {
+            velocity = 0;
             return;
         }
         set_dir(dir);
