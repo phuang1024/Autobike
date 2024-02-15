@@ -9,8 +9,10 @@ public:
     StepperServo() {
         pos = 0;
         last_st = MAX_ST;
+        curr_dir = false;
         enabled = true;
 
+        set_dir(false);
         set_enable(true);
 
         pinMode(3, OUTPUT);
@@ -70,19 +72,20 @@ private:
     const int SPR = 400 * 50.9;
     // degrees, plus/minus
     const int MAX_POS = degrees_to_steps(45);
-    const int MIN_ST = 200;
+    const int MIN_ST = 300;
     const int MAX_ST = 1500;
     // start decelerating when this many steps left.
-    const int DECEL_BEGIN = 600;
+    const int DECEL_BEGIN = 300;
     // weighted average factor
-    const float ACCEL = 0.1;
+    const float ACCEL = 0.05;
     // recalculate step time every x steps for performance.
-    const int ST_UPDATE_INTERVAL = 5;
+    const int ST_UPDATE_INTERVAL = 10;
 
     // steps
     long pos;
     // negative means rotating in neg dir
     long last_st;
+    bool curr_dir;
     bool enabled;
 
     float steps_to_degrees(long steps) {
@@ -94,7 +97,11 @@ private:
     }
 
     void set_dir(bool dir) {
-        digitalWrite(4, (dir ? HIGH : LOW));
+        if (dir != curr_dir) {
+          digitalWrite(4, (dir ? HIGH : LOW));
+          //delayMicroseconds(600);
+          curr_dir = dir;
+        }
     }
 
     void do_step(bool dir) {
