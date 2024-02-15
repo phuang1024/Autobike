@@ -51,24 +51,29 @@ void main_loop() {
         uint16_t rx_enable = ibus.readChannel(4);
 
         // read IMU
-        //IMURead imu = imu_read_avg(5, 10);
-        IMURead imu = imu_read();
+        IMURead imu = imu_read_avg(3, 1500);
         ax = ax * imu_avg + imu.ax * (1 - imu_avg);
         gx = gx * imu_avg + imu.gx * (1 - imu_avg);
-        ///*
-        Serial.print(ax);
-        Serial.print(' ');
-        Serial.println(gx);
-        //*/
-        //delay(500);
 
         // update steering enable
         steering.set_enable(rx_enable > 1500);
 
         // tmp steering test
-        long steering_pos = map(rx_steering, 1000, 2000, -45, 45);
-        //long steering_pos = (long)mapf(ax, -0.1, 0.1, -45, 45);
+        long steering_pos = (long)mapf(ax, -0.1, 0.1, -45, 45);
         steering.turn_to(steering_pos, loop_interval);
+    }
+}
+
+
+// rc control steering
+void test_steering() {
+    while (true) {
+        uint16_t rx_steering = ibus.readChannel(0);
+        uint16_t rx_enable = ibus.readChannel(4);
+
+        steering.set_enable(rx_enable > 1500);
+        long steering_pos = map(rx_steering, 1000, 2000, -45, 45);
+        steering.turn_to(steering_pos, 50);
     }
 }
 
@@ -76,7 +81,7 @@ void main_loop() {
 // print imu ax and gx
 void test_imu() {
     while (true) {
-        IMURead imu = imu_read_avg(5, 1000);
+        IMURead imu = imu_read_avg(3, 1500);
 
         Serial.print(imu.ax, 5);
         Serial.print(' ');
@@ -90,7 +95,7 @@ void test_imu() {
 void setup() {
     initalize();
 
-    test_imu();
+    //test_steering();
 
     main_loop();
 }
