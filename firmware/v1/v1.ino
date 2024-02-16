@@ -6,9 +6,12 @@
 #include "./utils.h"
 
 
+// experimentally determined
+const float IMU_AX_CENTER = 0.030846428571428573;
+
 IBusBM ibus;
 StepperServo steering;
-PIDControl pid_balance(0, 0, 0, 1, 0.99);
+PIDControl pid_balance(5, 0.1, 2000, .2, 1);
 
 
 void initalize() {
@@ -40,10 +43,7 @@ void main_loop() {
     float ax = 0, gx = 0;
     float imu_avg = 0.7;
 
-    // loop interval: 50ms
-    // read remote: every loop
-    // update pid: every loop
-    const int loop_interval = 50;
+    const int loop_interval = 30;
     while (true) {
         // read RC
         uint16_t rx_steering = ibus.readChannel(0);
@@ -51,16 +51,22 @@ void main_loop() {
         uint16_t rx_enable = ibus.readChannel(4);
 
         // read IMU
-        IMURead imu = imu_read_avg(3, 1500);
-        ax = ax * imu_avg + imu.ax * (1 - imu_avg);
+        IMURead imu = imu_read_avg(3, 1000);
+        ax = ax * imu_avg + (imu.ax - IMU_AX_CENTER) * (1 - imu_avg);
         gx = gx * imu_avg + imu.gx * (1 - imu_avg);
 
         // update steering enable
         steering.set_enable(rx_enable > 1500);
 
-        // tmp steering test
-        long steering_pos = (long)mapf(ax, -0.1, 0.1, -45, 45);
+        float error = ax;
+        float ctrl = pid_balance.update(ax, loop_interval);
+        Serial.println(ctrl);
+        long steering_pos = (long)mapf(ctrl, -1, 1, -45, 45);
         steering.turn_to(steering_pos, loop_interval);
+
+        // tmp steering test
+        //long steering_pos = (long)mapf(ax, -0.1, 0.1, -45, 45);
+        //steering.turn_to(steering_pos, loop_interval);
     }
 }
 
@@ -73,7 +79,7 @@ void test_steering() {
 
         steering.set_enable(rx_enable > 1500);
         long steering_pos = map(rx_steering, 1000, 2000, -45, 45);
-        steering.turn_to(steering_pos, 50);
+        steering.turn_to(steering_pos, 30);
     }
 }
 
@@ -81,7 +87,7 @@ void test_steering() {
 // print imu ax and gx
 void test_imu() {
     while (true) {
-        IMURead imu = imu_read_avg(3, 1500);
+        IMURead imu = imu_read_avg(3, 5000);
 
         Serial.print(imu.ax, 5);
         Serial.print(' ');
@@ -95,7 +101,8 @@ void test_imu() {
 void setup() {
     initalize();
 
-    test_steering();
+    //test_imu();
+    //test_steering();
 
     main_loop();
 }

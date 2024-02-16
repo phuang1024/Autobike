@@ -21,13 +21,13 @@ public:
     }
 
     float update(float error, float dt) {
-        curr_integral += error * dt;
+        curr_integral += ki * error * dt;
         curr_integral = constrain(curr_integral, -integral_clamp, integral_clamp);
         curr_integral *= integral_decay;
 
         float derivative = (error - last_error) / dt;
         last_error = error;
 
-        return kp * error + ki * curr_integral + kd * derivative;
+        return kp * error + curr_integral + kd * derivative;
     }
 };
