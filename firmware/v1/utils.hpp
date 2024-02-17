@@ -28,27 +28,52 @@ struct Averager {
 };
 
 
+// memory and compute efficient queue implementation.
+// TODO hardcoded max length.
+struct LoopQueue {
+    const int len = 10;
+    const float data[len];
+    int head;
+
+    LoopQueue() {
+        head = 0;
+        for (int i = 0; i < len; i++) {
+            data[i] = 0;
+        }
+    }
+
+    void push(float v) {
+        head = (head + 1) % len;
+        data[head] = v;
+    }
+
+    // i = 0 is latest element; i = 1 is the one before that, etc.
+    float get(int i) {
+        return data[(head - i) % len];
+    }
+};
+
+
 // Taylor series prediction
 // TODO currently hardcoded 3rd order
 struct Predictor {
-    float a, b, c, d;
+    LoopQueue data;
 
     Predictor() {
-        a = 0;
-        b = 0;
-        c = 0;
-        d = 0;
     }
 
     void update(float v) {
-        d = c;
-        c = b;
-        b = a;
-        a = v;
+        data.push(v);
     }
 
     float predict(int steps) {
         const float dt = 1;
+
+        const float
+            a = data.get(0),
+            b = data.get(1),
+            c = data.get(2),
+            d = data.get(3);
 
         float val = a;
         float deriv = (a - b) / dt;
