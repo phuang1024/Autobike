@@ -29,6 +29,38 @@ struct Averager {
 
 
 // Taylor series prediction
+// TODO currently hardcoded 3rd order
 struct Predictor {
+    float a, b, c, d;
 
+    Predictor() {
+        a = 0;
+        b = 0;
+        c = 0;
+        d = 0;
+    }
+
+    void update(float v) {
+        d = c;
+        c = b;
+        b = a;
+        a = v;
+    }
+
+    float predict(int steps) {
+        const float dt = 1;
+
+        float val = a;
+        float deriv = (a - b) / dt;
+        float deriv2 = (a - 2*b + c) / (dt*dt);
+        float deriv3 = (a - 3*b + 3*c - d) / (dt*dt*dt);
+
+        for (int i = 0; i < steps; i++) {
+            val += deriv * dt;
+            deriv += deriv2 * dt;
+            deriv2 += deriv3 * dt;
+        }
+
+        return val;
+    }
 };

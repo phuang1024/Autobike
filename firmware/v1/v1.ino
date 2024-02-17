@@ -87,15 +87,20 @@ void test_steering() {
 // print: ax EMA_ax
 void test_imu() {
     Averager ax_avg(0.8);
+    Predictor ax_pred;
 
     while (true) {
         IMURead imu = imu_read_avg(10, 100);
 
         ax_avg.update(imu.ax);
+        ax_pred.update(ax_avg.val);
+        float ax_pred_val = ax_pred.predict(4);
 
         Serial.print(imu.ax, 6);
         Serial.print(' ');
         Serial.print(ax_avg.val, 6);
+        Serial.print(' ');
+        Serial.print(ax_pred_val, 6);
         Serial.print(' ');
         Serial.println();
 
