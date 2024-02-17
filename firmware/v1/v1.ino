@@ -1,9 +1,9 @@
 #include <IBusBM.h>
 
-#include "./imu.h"
-#include "./pid.h"
-#include "./stepper.h"
-#include "./utils.h"
+#include "./imu.hpp"
+#include "./pid.hpp"
+#include "./stepper.hpp"
+#include "./utils.hpp"
 
 
 // experimentally determined
