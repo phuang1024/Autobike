@@ -94,7 +94,7 @@ void test_imu() {
 
         ax_avg.update(imu.ax);
         ax_pred.update(ax_avg.val);
-        float ax_pred_val = ax_pred.predict(4);
+        float ax_pred_val = ax_pred.predict(3);
 
         Serial.print(imu.ax, 6);
         Serial.print(' ');

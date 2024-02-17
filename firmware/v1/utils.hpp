@@ -31,8 +31,8 @@ struct Averager {
 // memory and compute efficient queue implementation.
 // TODO hardcoded max length.
 struct LoopQueue {
-    const int len = 10;
-    const float data[len];
+    const static int len = 10;
+    float data[len];
     int head;
 
     LoopQueue() {
@@ -49,13 +49,17 @@ struct LoopQueue {
 
     // i = 0 is latest element; i = 1 is the one before that, etc.
     float get(int i) {
-        return data[(head - i) % len];
+        int index = head - i;
+        if (index < 0) {
+            index += len;
+        }
+        return data[index];
     }
 };
 
 
 // Taylor series prediction
-// TODO currently hardcoded 3rd order
+// TODO currently hardcoded 1st order
 struct Predictor {
     LoopQueue data;
 
@@ -67,23 +71,23 @@ struct Predictor {
     }
 
     float predict(int steps) {
-        const float dt = 1;
+        const float dt = 3;
 
         const float
             a = data.get(0),
-            b = data.get(1),
-            c = data.get(2),
-            d = data.get(3);
+            b = data.get(dt),
+            c = data.get(2*dt),
+            d = data.get(3*dt);
 
         float val = a;
         float deriv = (a - b) / dt;
-        float deriv2 = (a - 2*b + c) / (dt*dt);
-        float deriv3 = (a - 3*b + 3*c - d) / (dt*dt*dt);
+        //float deriv2 = (a - 2*b + c) / (dt*dt);
+        //float deriv3 = (a - 3*b + 3*c - d) / (dt*dt*dt);
 
         for (int i = 0; i < steps; i++) {
+            //deriv2 += deriv3 * dt;
+            //deriv += deriv2 * dt;
             val += deriv * dt;
-            deriv += deriv2 * dt;
-            deriv2 += deriv3 * dt;
         }
 
         return val;
