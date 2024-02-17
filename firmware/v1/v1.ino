@@ -84,14 +84,20 @@ void test_steering() {
 }
 
 
-// print imu ax and gx
+// print: ax EMA_ax
 void test_imu() {
-    while (true) {
-        IMURead imu = imu_read_avg(3, 5000);
+    Averager ax_avg(0.8);
 
-        Serial.print(imu.ax, 5);
+    while (true) {
+        IMURead imu = imu_read_avg(10, 100);
+
+        ax_avg.update(imu.ax);
+
+        Serial.print(imu.ax, 6);
         Serial.print(' ');
-        Serial.println(imu.gx, 5);
+        Serial.print(ax_avg.val, 6);
+        Serial.print(' ');
+        Serial.println();
 
         delay(50);
     }
@@ -101,7 +107,7 @@ void test_imu() {
 void setup() {
     initalize();
 
-    //test_imu();
+    test_imu();
     //test_steering();
 
     main_loop();
