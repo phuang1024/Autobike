@@ -59,7 +59,7 @@ struct LoopQueue {
 
 
 // Taylor series prediction
-// TODO currently hardcoded 1st order
+// TODO currently hardcoded 3rd order (or less).
 struct Predictor {
     LoopQueue data;
 
@@ -71,13 +71,14 @@ struct Predictor {
     }
 
     float predict(int steps) {
-        const float dt = 3;
+        const float dt = 1;
 
+        const int stretch = 4;
         const float
             a = data.get(0),
-            b = data.get(dt),
-            c = data.get(2*dt),
-            d = data.get(3*dt);
+            b = data.get(stretch),
+            c = data.get(2*stretch),
+            d = data.get(3*stretch);
 
         float val = a;
         float deriv = (a - b) / dt;

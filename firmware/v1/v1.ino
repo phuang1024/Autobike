@@ -9,9 +9,21 @@
 // experimentally determined
 const float IMU_AX_CENTER = 0.030846428571428573;
 
+// hyperparameters
+const float
+    PID_KP = 1,
+    PID_KI = 0,
+    PID_KD = 0,
+    PID_I_BOUND = 1,
+    PID_I_DECAY = 1;
+const float
+    IMU_EMA_FAC = 0.7;
+const int
+    IMU_PRED_STEPS = 2;
+
 IBusBM ibus;
 StepperServo steering;
-PIDControl pid_balance(5, 0.1, 2000, .2, 1);
+PIDControl pid_balance(PID_KP, PID_KI, PID_KD, PID_I_BOUND, PID_I_DECAY);
 
 
 void initalize() {
@@ -39,9 +51,8 @@ void initalize() {
 
 
 void main_loop() {
-    // stabilized via moving average
-    float ax = 0, gx = 0;
-    float imu_avg = 0.7;
+    Averager ax_avg(IMU_EMA_FAC);
+    Predictor ax_pred;
 
     const int loop_interval = 30;
     while (true) {
@@ -52,15 +63,16 @@ void main_loop() {
 
         // read IMU
         IMURead imu = imu_read_avg(3, 1000);
-        ax = ax * imu_avg + (imu.ax - IMU_AX_CENTER) * (1 - imu_avg);
-        gx = gx * imu_avg + imu.gx * (1 - imu_avg);
+        ax_avg.update(imu.ax);
+        ax_pred.update(ax_avg.val);
+        float ax_pred_val = ax_pred.predict(IMU_PRED_STEPS);
 
         // update steering enable
         steering.set_enable(rx_enable > 1500);
 
-        float error = ax;
-        float ctrl = pid_balance.update(ax, loop_interval);
-        Serial.println(ctrl);
+        float error = ax_pred_val;
+        float ctrl = pid_balance.update(error, loop_interval);
+        Serial.println(ctrl, 5);
         long steering_pos = (long)mapf(ctrl, -1, 1, -45, 45);
         steering.turn_to(steering_pos, loop_interval);
 
@@ -84,7 +96,7 @@ void test_steering() {
 }
 
 
-// print: ax EMA_ax
+// print: ax EMA_ax pred_ax
 void test_imu() {
     Averager ax_avg(0.8);
     Predictor ax_pred;
@@ -94,7 +106,7 @@ void test_imu() {
 
         ax_avg.update(imu.ax);
         ax_pred.update(ax_avg.val);
-        float ax_pred_val = ax_pred.predict(3);
+        float ax_pred_val = ax_pred.predict(2);
 
         Serial.print(imu.ax, 6);
         Serial.print(' ');
@@ -112,7 +124,7 @@ void test_imu() {
 void setup() {
     initalize();
 
-    test_imu();
+    //test_imu();
     //test_steering();
 
     main_loop();
