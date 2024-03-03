@@ -11,9 +11,9 @@ const float IMU_AX_CENTER = 0.030846428571428573;
 
 // hyperparameters
 const float
-    PID_KP = 1,
+    PID_KP = 8,
     PID_KI = 0,
-    PID_KD = 0,
+    PID_KD = 2000,
     PID_I_BOUND = 1,
     PID_I_DECAY = 1;
 const float
@@ -54,31 +54,41 @@ void main_loop() {
     Averager ax_avg(IMU_EMA_FAC);
     Predictor ax_pred;
 
-    const int loop_interval = 30;
+    Timer timer;
+
+    const int loop_interval = 50;
     while (true) {
         // read RC
+        timer.reset();
         uint16_t rx_steering = ibus.readChannel(0);
         uint16_t rx_throttle = ibus.readChannel(2);
         uint16_t rx_enable = ibus.readChannel(4);
+        Serial.print(timer.elapsed()); Serial.print(' ');
 
         // read IMU
-        IMURead imu = imu_read_avg(3, 1000);
+        timer.reset();
+        IMURead imu = imu_read_avg(1, 10);
         ax_avg.update(imu.ax);
-        ax_pred.update(ax_avg.val);
-        float ax_pred_val = ax_pred.predict(IMU_PRED_STEPS);
+        Serial.print(timer.elapsed()); Serial.print(' ');
+        //ax_pred.update(ax_avg.val);
+        //float ax_pred_val = ax_pred.predict(IMU_PRED_STEPS);
+
+        timer.reset();
+        float error = ax_avg.val; //ax_pred_val;
+        float ctrl = pid_balance.update(error, loop_interval);
+        Serial.print(timer.elapsed()); Serial.print(' ');
 
         // update steering enable
         steering.set_enable(rx_enable > 1500);
 
-        float error = ax_pred_val;
-        float ctrl = pid_balance.update(error, loop_interval);
-        Serial.println(ctrl, 5);
         long steering_pos = (long)mapf(ctrl, -1, 1, -45, 45);
         steering.turn_to(steering_pos, loop_interval);
 
         // tmp steering test
         //long steering_pos = (long)mapf(ax, -0.1, 0.1, -45, 45);
         //steering.turn_to(steering_pos, loop_interval);
+
+        Serial.println();
     }
 }
 
@@ -102,7 +112,7 @@ void test_imu() {
     Predictor ax_pred;
 
     while (true) {
-        IMURead imu = imu_read_avg(10, 100);
+        IMURead imu = imu_read_avg(10, 10);
 
         ax_avg.update(imu.ax);
         ax_pred.update(ax_avg.val);

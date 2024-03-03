@@ -94,3 +94,21 @@ struct Predictor {
         return val;
     }
 };
+
+
+// simple timer for code profiling.
+struct Timer {
+    long start;
+
+    Timer() {
+        start = millis();
+    }
+
+    long elapsed() {
+        return millis() - start;
+    }
+
+    void reset() {
+        start = millis();
+    }
+};
