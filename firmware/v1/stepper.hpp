@@ -70,7 +70,7 @@ public:
             }
 
             i++;
-            if (delta >= 30) {
+            if (delta >= 20) {
                 do_step(velocity > 0);
             }
             delayMicroseconds(step_time);
@@ -83,7 +83,7 @@ private:
     // max steps possible in both directions
     const int MAX_POS = degrees_to_steps(45);
     // min and max step time (us)
-    const int MIN_ST = 300;
+    const int MIN_ST = 200;
     const int MAX_ST = 1500;
     // start decelerating when this many steps left.
     const int DECEL_BEGIN = degrees_to_steps(5);

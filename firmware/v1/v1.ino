@@ -135,7 +135,7 @@ void setup() {
     initalize();
 
     //test_imu();
-    //test_steering();
+    test_steering();
 
     main_loop();
 }
