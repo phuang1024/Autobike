@@ -11,13 +11,13 @@ const float IMU_AX_CENTER = 0.030846428571428573;
 
 // hyperparameters
 const float
-    PID_KP = 8,
+    PID_KP = 10,
     PID_KI = 0,
-    PID_KD = 2000,
+    PID_KD = 0,
     PID_I_BOUND = 1,
     PID_I_DECAY = 1;
 const float
-    IMU_EMA_FAC = 0.7;
+    IMU_EMA_FAC = 0.4;
 const int
     IMU_PRED_STEPS = 2;
 
@@ -54,29 +54,21 @@ void main_loop() {
     Averager ax_avg(IMU_EMA_FAC);
     Predictor ax_pred;
 
-    Timer timer;
-
     const int loop_interval = 50;
     while (true) {
         // read RC
-        timer.reset();
         uint16_t rx_steering = ibus.readChannel(0);
         uint16_t rx_throttle = ibus.readChannel(2);
         uint16_t rx_enable = ibus.readChannel(4);
-        Serial.print(timer.elapsed()); Serial.print(' ');
 
         // read IMU
-        timer.reset();
-        IMURead imu = imu_read_avg(1, 10);
+        IMURead imu = imu_read_avg(10, 50);
         ax_avg.update(imu.ax);
-        Serial.print(timer.elapsed()); Serial.print(' ');
         //ax_pred.update(ax_avg.val);
         //float ax_pred_val = ax_pred.predict(IMU_PRED_STEPS);
 
-        timer.reset();
-        float error = ax_avg.val; //ax_pred_val;
+        float error = ax_avg.val;
         float ctrl = pid_balance.update(error, loop_interval);
-        Serial.print(timer.elapsed()); Serial.print(' ');
 
         // update steering enable
         steering.set_enable(rx_enable > 1500);
@@ -87,8 +79,6 @@ void main_loop() {
         // tmp steering test
         //long steering_pos = (long)mapf(ax, -0.1, 0.1, -45, 45);
         //steering.turn_to(steering_pos, loop_interval);
-
-        Serial.println();
     }
 }
 
@@ -108,11 +98,11 @@ void test_steering() {
 
 // print: ax EMA_ax pred_ax
 void test_imu() {
-    Averager ax_avg(0.8);
+    Averager ax_avg(IMU_EMA_FAC);
     Predictor ax_pred;
 
     while (true) {
-        IMURead imu = imu_read_avg(10, 10);
+        IMURead imu = imu_read_avg(10, 50);
 
         ax_avg.update(imu.ax);
         ax_pred.update(ax_avg.val);

@@ -11,7 +11,7 @@ float constrainf(float v, float min_v, float max_v) {
 
 
 // EMA
-// factor 0 means no filtering, 1 means no change
+// factor 0 means no filtering, 1 means complete ema prev value
 struct Averager {
     float fac;
     float val;
